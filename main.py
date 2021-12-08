@@ -66,6 +66,61 @@ async def beg(ctx):
         json.dump(users, f)
 
 
+@client.command(aliases=['dp'])
+async def deposit(ctx):
+    await open_account(ctx.author)
+    await ctx.send("Please enter the amount")
+
+    def check(msg):
+        return msg.author == ctx.author and msg.channel == ctx.channel
+
+    message = await client.wait_for("message", check=check)
+
+    amt = message.content
+
+    bal = await update_bank(ctx.author)
+
+    amt = int(amt)
+    if amt > bal[0]:
+        await ctx.send('You do not have sufficient balance')
+        return
+    if amt < 0:
+        await ctx.send('Amount must be positive!')
+        return
+
+    await update_bank(ctx.author, -1*amt)
+    await update_bank(ctx.author, amt, 'bank')
+    await ctx.send(f'{ctx.author.mention} You deposited {amt} coins')
+
+
+@client.command(aliases=['wd'])
+async def withdraw(ctx, amount=None):
+    await open_account(ctx.author)
+    await ctx.send("Please enter the amount")
+
+    def check(msg):
+        return msg.author == ctx.author and msg.channel == ctx.channel
+
+    message = await client.wait_for("message", check=check)
+
+    amt = message.content
+
+    bal = await update_bank(ctx.author)
+
+    amt = int(amt)
+
+    if amt > bal[1]:
+        await ctx.send('You do not have sufficient balance')
+        return
+    if amt < 0:
+        await ctx.send('Amount must be positive!')
+        return
+
+    await update_bank(ctx.author, amt)
+    await update_bank(ctx.author, -1*amt, 'bank')
+    await ctx.send(f'{ctx.author.mention} You withdrew {amt} coins')
+
+
 async def open_account(user):
 
     users = await get_bank_data()
