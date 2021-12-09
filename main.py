@@ -121,6 +121,54 @@ async def withdraw(ctx, amount=None):
     await ctx.send(f'{ctx.author.mention} You withdrew {amt} coins')
 
 
+@client.command(aliases=['sm'])
+async def send(ctx, member: discord.Member, amount=None):
+    await open_account(ctx.author)
+    await open_account(member)
+    await ctx.send("Please enter the amount")
+
+    def check(msg):
+        return msg.author == ctx.author and msg.channel == ctx.channel
+
+    message = await client.wait_for("message", check=check)
+
+    amount = message.content
+
+    bal = await update_bank(ctx.author)
+    if amount == 'all':
+        amount = bal[0]
+
+    amount = int(amount)
+
+    if amount > bal[0]:
+        await ctx.send('You do not have sufficient balance')
+        return
+    if amount < 0:
+        await ctx.send('Amount must be positive!')
+        return
+
+    await update_bank(ctx.author, -1*amount, 'bank')
+    await update_bank(member, amount, 'bank')
+    await ctx.send(f'{ctx.author.mention} You gave {member} {amount} coins')
+
+
+@client.command(aliases=['rb'])
+async def rob(ctx, member: discord.Member):
+    await open_account(ctx.author)
+    await open_account(member)
+    bal = await update_bank(member)
+
+    if bal[0] < 100:
+        await ctx.send('It is useless to rob him/her :(')
+        return
+
+    earning = random.randrange(0, bal[0])
+
+    await update_bank(ctx.author, earning)
+    await update_bank(member, -1*earning)
+    await ctx.send(f'{ctx.author.mention} You robbed {member} and got {earning} coins')
+
+
 async def open_account(user):
 
     users = await get_bank_data()
