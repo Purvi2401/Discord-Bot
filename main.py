@@ -269,6 +269,73 @@ async def buy_this(user, item_name, amount):
     return [True, "Worked"]
 
 
+@client.command()
+async def sell(ctx, item, amount=1):
+    await open_account(ctx.author)
+
+    res = await sell_this(ctx.author, item, amount)
+
+    if not res[0]:
+        if res[1] == 1:
+            await ctx.send("That Object isn't there!")
+            return
+        if res[1] == 2:
+            await ctx.send(f"You don't have {amount} {item} in your bag.")
+            return
+        if res[1] == 3:
+            await ctx.send(f"You don't have {item} in your bag.")
+            return
+
+    await ctx.send(f"You just sold {amount} {item}.")
+
+
+async def sell_this(user, item_name, amount, price=None):
+    item_name = item_name.lower()
+    name_ = None
+    for item in mainshop:
+        name = item["name"].lower()
+        if name == item_name:
+            name_ = name
+            if price == None:
+                price = 0.8 * item["price"]
+            break
+
+    if name_ == None:
+        return [False, 1]
+
+    cost = price*amount
+
+    users = await get_bank_data()
+
+    bal = await update_bank(user)
+
+    try:
+        index = 0
+        t = None
+        for thing in users[str(user.id)]["bag"]:
+            n = thing["item"]
+            if n == item_name:
+                old_amt = thing["amount"]
+                new_amt = old_amt - amount
+                if new_amt < 0:
+                    return [False, 2]
+                users[str(user.id)]["bag"][index]["amount"] = new_amt
+                t = 1
+                break
+            index += 1
+        if t == None:
+            return [False, 3]
+    except:
+        return [False, 3]
+
+    with open("mainbank.json", "w") as f:
+        json.dump(users, f)
+
+    await update_bank(user, cost, "wallet")
+
+    return [True, "Worked"]
+
+
 @client.command(aliases=["lb"])
 async def leaderboard(ctx, x=1):
     users = await get_bank_data()
